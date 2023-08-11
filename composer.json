@@ -1,0 +1,21 @@
+{
+    "name": "rondigital/query-filter",
+    "description": "Filter and search in Laravel Model.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Rondigital\\QueryFilter\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Ceren Özkurt",
+            "email": "33186246+cerenozkurt@users.noreply.github.com"
+        }
+    ],
+    "require": {
+        "illuminate/http": "*",
+        
+    }
+}
