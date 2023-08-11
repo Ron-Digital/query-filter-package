@@ -4,6 +4,7 @@ namespace Rondigital\QueryFilter;
 
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 trait QueryFilter
 {
@@ -61,8 +62,14 @@ trait QueryFilter
         }
         if ($request->has('search')) {
             $searchTerm = $request->search;
-            $searchColumn = $request->searchColumn ?? 'name'; // Default sütunlar
-            $collection->Where($searchColumn, 'like', '%' . $searchTerm . '%');
+            if($request->searchColumn){
+                $searchColumn = $request->searchColumn; // Default sütunlar
+                if($searchColumn){
+                    if(Schema::hasColumn($collection->first()->getTable(), $searchColumn)){
+                        $collection = $collection->where($searchColumn, 'like', '%' . $searchTerm . '%');
+                    }
+                }
+            }
         }
 
         $collection = $collection->orderBy($request->orderBy ?? 'id', $request->orderType ?? 'asc')->paginate($request->perPage ?? 10);
