@@ -3,7 +3,11 @@
 namespace Rondigital\QueryFilter;
 
 use Carbon\Carbon;
+use Illuminate\Container\Container;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
 
 trait QueryFilter
@@ -62,10 +66,10 @@ trait QueryFilter
         }
         if ($request->has('search')) {
             $searchTerm = $request->search;
-            if($request->searchColumn){
+            if ($request->searchColumn) {
                 $searchColumn = $request->searchColumn; // Default sütunlar
-                if($searchColumn){
-                    if(Schema::hasColumn($collection->first()->getTable(), $searchColumn)){
+                if ($searchColumn) {
+                    if (Schema::hasColumn($collection->first()->getTable(), $searchColumn)) {
                         $collection = $collection->where($searchColumn, 'like', '%' . $searchTerm . '%');
                     }
                 }
@@ -76,7 +80,7 @@ trait QueryFilter
         return $collection;
 
     }
-     public function query_array($array, Request $request)
+    public function query_array($array, Request $request)
     {
         $collection = collect($array);
         if ($request->has('startingDate')) {
@@ -156,11 +160,26 @@ trait QueryFilter
         } else {
             $collection = $collection->sortByDesc($orderBy);
         }
-
-        // Sayfalama işlemi
-        $perPage = $request->perPage ?? 10;
-        $currentPage = $request->page ?? 1;
-        $collection = $collection->forPage($currentPage, $perPage);
-        return $collection->values();
+        return $this->paginateCollection($collection, $request);
     }
+
+    public function paginateCollection(Collection $collection, Request $request)
+    {
+        $perPage = $request->input('perPage', 10);
+        $currentPage = $request->input('page', 1);
+        $offset = ($currentPage - 1) * $perPage;
+        
+        $paginatedItems = $collection->slice($offset, $perPage);
+        
+        $paginator = new LengthAwarePaginator(
+            $paginatedItems,
+            $collection->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+        
+        return $paginator;
+    }
+
 }
