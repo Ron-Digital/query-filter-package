@@ -64,7 +64,7 @@ trait QueryFilter
                     break;
             }
         }
-        if ($request->has('search')) {
+        if ($request->has('search') || $request->has('searchValues')) {
             $searchTerm = $request->search;
             if ($request->searchColumn) {
                 $searchColumn = $request->searchColumn; // Default sütunlar
@@ -73,12 +73,24 @@ trait QueryFilter
                         $collection = $collection->where($searchColumn, 'like', '%' . $searchTerm . '%');
                     }
                 }
+                $searchValues = $request->searchValues;
+                if ($searchValues) {
+                    $values = explode(',', $searchValues); // Virgülle ayrılan değerleri diziye ayır
+                    $collection = $collection->where(function ($query) use ($searchColumn, $values) {
+                        foreach ($values as $value) {
+                            if ($searchColumn == 'id') {
+                                $query->orWhere($searchColumn, $value);
+                            } else {
+                                $query->orWhere($searchColumn, 'like', '%' . $value . '%');
+                            }
+                        }
+                    });
+                }
             }
         }
 
         $collection = $collection->orderBy($request->orderBy ?? 'id', $request->orderType ?? 'asc')->paginate($request->perPage ?? 10);
         return $collection;
-
     }
     public function query_array($array, Request $request)
     {
@@ -137,7 +149,7 @@ trait QueryFilter
                     break;
             }
         }
-        if ($request->has('search')) {
+        if ($request->has('search') || $request->has('searchValues')) {
             $searchTerm = $request->search;
             if ($request->searchColumn) {
                 $searchColumn = $request->searchColumn; // Default sütunlar
@@ -149,6 +161,21 @@ trait QueryFilter
                                 $searchTerm
                             ) !== false;
                         });
+                }
+            }
+            $searchValues = $request->searchValues;
+            if ($searchValues) {
+                $searchColumn = $request->searchColumn;
+                if ($searchColumn) {
+                    $collection = $collection->filter(function ($item) use ($searchValues, $searchColumn) {
+                        $values = explode(',', $searchValues);
+                        foreach ($values as $value) {
+                            if (isset($item[$searchColumn]) && strpos($item[$searchColumn], $value) !== false) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    });
                 }
             }
         }
@@ -168,9 +195,9 @@ trait QueryFilter
         $perPage = $request->input('perPage', 10);
         $currentPage = $request->input('page', 1);
         $offset = ($currentPage - 1) * $perPage;
-        
+
         $paginatedItems = $collection->slice($offset, $perPage);
-        
+
         $paginator = new LengthAwarePaginator(
             $paginatedItems,
             $collection->count(),
@@ -178,8 +205,7 @@ trait QueryFilter
             $currentPage,
             ['path' => $request->url(), 'query' => $request->query()]
         );
-        
+
         return $paginator;
     }
-
 }
